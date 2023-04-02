@@ -24,12 +24,12 @@ f_angle = interp1d(X1, Y1, kind='cubic')  # hs -> angle
 X3 = np.array(
     [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8])*1e5  # distance
 Y3 = np.array(
-    [25000, 23333, 21667, 20000, 18333, 16667, 15000, 13333, 11667, 10000, 8333, 6667, 5000, 900, 100, 0])  # altitude
+    [25000, 23333, 21667, 20000, 18333, 16667, 15000, 13333, 11667, 10000, 8333, 6667, 2000, 1000, 100, 0])  # altitude
 f3_trajectory = interp1d(X3, Y3, kind='cubic')  # distance -> alt
 
 X4 = np.array(
-    [1700.00, 1586.67, 1473.33, 1360.00, 1246.67, 1133.33, 1020.00, 906.67, 793.33, 680.00, 566.67, 40.33, 30.00,
-     20, 10, 0])  # hs
+    [1700.00, 1586.67, 1473.33, 1360.00, 1246.67, 1133.33, 1000, 800, 500, 60, 50, 4, 3,
+     0.2, 0.1, 0])  # hs
 Y4 = np.array([0, 3, 6, 9, 12, 15, 18, 21, 46, 47, 48, 49, 40, 50, 88, 90])  # angle
 f4_angle = interp1d(X4, Y4, kind='cubic')  # hs -> angle
 
@@ -60,7 +60,7 @@ class Bereshit():
         self.time = 0
         self.altitude = ALT0
         self.fuel = 420 * 0.5
-        self.vertical_speed = 0.0
+        self.vertical_speed = 1.6
         self.horizontal_speed = V0
         self.distance = 0.0
         self.angle = 0.0
@@ -312,10 +312,19 @@ class Bereshit():
                 f'{self.time}, {self.altitude}, {self.fuel}, {self.vertical_speed}, {self.horizontal_speed}, {self.distance}, {self.angle}, {int(self.engine_is_on)}\n')
 
             # , time, altitude, fuel, verticalSpeed, horizontalSpeed, distance, angle)
-            self.time += dt  # 1 sec pear loop
-            dx = self.horizontal_speed + self.acc_x * dt
+            self.time += dt  # 1 sec per loop
+
+            self.horizontal_speed += (self.acc_x * dt)
+            if self.horizontal_speed < 0:
+                self.horizontal_speed = 0
+
+            self.vertical_speed += (self.acc_y * dt)
+            if self.vertical_speed < 1.6:
+                self.vertical_speed = 1.6
+
+            dx = self.horizontal_speed
             self.distance += dx
-            dy = self.vertical_speed + self.acc_y * dt
+            dy = self.vertical_speed
             self.altitude -= math.fabs(dy)
 
             if self.distance < 800e3:
@@ -328,7 +337,7 @@ class Bereshit():
                 print(target_altitude, self.altitude)
 
                 if target_altitude < self.altitude or self.altitude > 5:
-                    self.breaks1()
+                    self.breaks()
                 else:
                     self.gas()
             else:
@@ -366,14 +375,6 @@ class Bereshit():
             elif self.angle <= 0:
                 self.angle = 0
 
-            self.horizontal_speed += self.acc_x
-            if self.horizontal_speed < 0:
-                self.horizontal_speed = 0
-
-            self.vertical_speed += self.acc_y
-            if self.vertical_speed < 1.6:
-                self.vertical_speed = 1.6
-
             if self.fuel <= 0 < self.altitude:
                 print("Oooops... I've crashed!.")
                 break
@@ -385,13 +386,10 @@ class Bereshit():
         self.engines_off()
 
     def breaks(self):
-        self.acc_x = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
-        self.engines_on()
+        breaks = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
+        self.acc_x = breaks * math.cos(math.radians(self.angle))
+        self.acc_y = breaks * math.sin(math.radians(self.angle))
 
-    def breaks1(self):
-        self.acc_x = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
-        self.acc_x = self.acc_x * math.cos(math.radians(self.angle))
-        self.acc_y = -(1.6 * math.sin(math.radians(self.angle)))
         self.engines_on()
 
     def engines_on(self):

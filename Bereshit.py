@@ -8,13 +8,30 @@ import seaborn as sns
 import numpy as np
 from scipy.interpolate import interp1d
 
-X = np.array([0, 100, 200, 300, 400, 500, 600, 700, 750, 800]) * 1e3  # distance
-Y = np.array([25, 22, 19.5, 10, 5, 1, 0.2, 0.022, 0.001, -0.001]) * 1e3  # altitude
+X = np.array(
+    [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8])*1e5  # distance
+Y = np.array(
+    [25000, 23333, 21667, 20000, 18333, 16667, 15000, 13333, 11667, 10000, 8333, 6667, 5000, 3333, 1000, 0])  # altitude
 f_trajectory = interp1d(X, Y, kind='cubic')  # distance -> alt
 
-X1 = np.array([17.0, 15.0, 13.0, 11.0, 9.0, 7.0, 5.0, 3.0, 1.0, 0.5, 0.2, 0.01, 0]) * 1e2  # hs
-Y1 = np.array([0, 1, 2,3, 10, 15, 18, 20, 50, 68, 80, 88, 90])  # angle
+X1 = np.array(
+    [1700.00, 1586.67, 1473.33, 1360.00, 1246.67, 1133.33, 1020.00, 906.67, 793.33, 680.00, 566.67, 453.33, 340.00,
+     226.67, 113.33, 0])  # hs
+Y1 = np.array([0, 6, 12, 18, 24, 30, 36, 42, 48, 54, 60, 66, 72, 78, 84, 90])  # angle
 f_angle = interp1d(X1, Y1, kind='cubic')  # hs -> angle
+
+
+X3 = np.array(
+    [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8])*1e5  # distance
+Y3 = np.array(
+    [25000, 23333, 21667, 20000, 18333, 16667, 15000, 13333, 11667, 10000, 8333, 6667, 5000, 900, 100, 0])  # altitude
+f3_trajectory = interp1d(X3, Y3, kind='cubic')  # distance -> alt
+
+X4 = np.array(
+    [1700.00, 1586.67, 1473.33, 1360.00, 1246.67, 1133.33, 1020.00, 906.67, 793.33, 680.00, 566.67, 40.33, 30.00,
+     20, 10, 0])  # hs
+Y4 = np.array([0, 3, 6, 9, 12, 15, 18, 21, 46, 47, 48, 49, 40, 50, 88, 90])  # angle
+f4_angle = interp1d(X4, Y4, kind='cubic')  # hs -> angle
 
 # def print_f1():
 #     xnew = np.arange(0, 800, 0.1)
@@ -277,9 +294,12 @@ class Bereshit():
 
         # Continue the process until alt = 0 or out of fuel
         print('Time, Alt, Fuel, VS, HS, Dist, angle')
-        pid = PID(0.4, 0.1, 0.01)
-        pid.set_point = ALT0
-        while self.altitude >= 0:
+        pid_alt = PID(0.4, 0.2, 0.01)
+        pid_alt.set_point = ALT0
+
+        pid_ang = PID(1, 0.5, 0.01)
+        pid_ang.set_point = 0
+        while self.altitude >= 5:
             row = {'time': self.time, 'altitude': self.altitude, 'fuel': self.fuel, 'vs': self.vertical_speed,
                    'hs': self.horizontal_speed, 'distance': self.distance, 'angle': self.angle}
             self.df = self.df.append(row, ignore_index=True)
@@ -299,23 +319,20 @@ class Bereshit():
             self.altitude -= math.fabs(dy)
 
             if self.distance < 800e3:
-                target_altitude = f_trajectory(self.distance)
+                target_altitude = f3_trajectory(self.distance)
 
                 # update(accel, max_accel, gap, prev_gap, safety_thresh, dt)
-                pid.set_point = target_altitude
-                output = pid.update(self.altitude, dt)
+                pid_alt.set_point = target_altitude
+                output = pid_alt.update(self.altitude, dt)
                 self.altitude += output
                 print(target_altitude, self.altitude)
 
                 if target_altitude < self.altitude or self.altitude > 5:
-                    self.breaks()
+                    self.breaks1()
                 else:
                     self.gas()
             else:
-                if self.altitude > 5:
-                    self.breaks()
-                else:
-                    self.gas()
+                self.gas()
 
             # if self.altitude >= 100 and self.distance < 300e3:
             #     if self.vertical_speed > 34:
@@ -338,10 +355,15 @@ class Bereshit():
             # else:
             #     self.acc_y = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
 
-            self.angle = f_angle(self.horizontal_speed)
-            if self.angle > 90:
+            target_angle = f4_angle(self.horizontal_speed)
+            pid_ang.set_point = target_angle
+            output_ang = pid_ang.update(self.angle, dt)
+            self.angle += output_ang
+            print(target_angle, self.angle)
+
+            if self.angle >= 90:
                 self.angle = 90
-            elif self.angle < 0:
+            elif self.angle <= 0:
                 self.angle = 0
 
             self.horizontal_speed += self.acc_x
@@ -363,6 +385,10 @@ class Bereshit():
         self.engines_off()
 
     def breaks(self):
+        self.acc_x = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
+        self.engines_on()
+
+    def breaks1(self):
         self.acc_x = -(MAIN_ENGINE_TRUST + SIDE_ENGINE_TRUST * NUM_SIDE_ENGINE) / self.weight
         self.acc_x = self.acc_x * math.cos(math.radians(self.angle))
         self.acc_y = -(1.6 * math.sin(math.radians(self.angle)))

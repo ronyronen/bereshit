@@ -211,7 +211,7 @@ class Bereshit():
             print("Oooops... I've crashed!.")
 
         self.logfile.close()
-        plot(self.filename)
+        plot(self.filename, 'land.png')
 
     def land_traj(self):
         # Continue the process until alt = 0 or out of fuel
@@ -284,7 +284,7 @@ class Bereshit():
                 break
 
         self.logfile.close()
-        plot(self.filename)
+        plot(self.filename, 'land_traj.png')
 
     def land_pid(self):
         from pid_control import PID
@@ -309,7 +309,7 @@ class Bereshit():
 
             # 'Time, Alt, Fuel, VS, HS, Dist, angle\n')
             self.logfile.write(
-                f'{self.time}, {self.altitude}, {self.fuel}, {self.vertical_speed}, {self.horizontal_speed}, {self.distance}, {self.angle}, {self.engine_is_on}\n')
+                f'{self.time}, {self.altitude}, {self.fuel}, {self.vertical_speed}, {self.horizontal_speed}, {self.distance}, {self.angle}, {int(self.engine_is_on)}\n')
 
             # , time, altitude, fuel, verticalSpeed, horizontalSpeed, distance, angle)
             self.time += dt  # 1 sec pear loop
@@ -379,7 +379,7 @@ class Bereshit():
                 break
 
         self.logfile.close()
-        plot(self.filename)
+        plot(self.filename, 'land_pid.png')
 
     def gas(self):
         self.engines_off()
@@ -408,7 +408,7 @@ class Bereshit():
         self.weight = SELF_WEIGHT + self.fuel
 
 
-def plot(filename):
+def plot(filename, fig_name='fig.png'):
     data = np.genfromtxt(filename, delimiter=',', skip_header=1)
 
     # time, altitude, fuel, verticalSpeed, horizontalSpeed, distance, angle, engine
@@ -419,7 +419,6 @@ def plot(filename):
     hs = data[:, 4]
     d = data[:, 5]
     ag = data[:, 6]
-    en = data[:, 7]
 
     fig, axs = plt.subplots(2)
     d = d / 1000
@@ -435,5 +434,6 @@ def plot(filename):
     a = np.vstack((data[:, 0], data[:, 7]))
     a = a[:, a[1] > 0]
     sns.scatterplot(x=a[0], y=a[1], ax=axs[1], label='engine', marker=".")
+    plt.savefig('docs/' + fig_name)
 
     plt.show()

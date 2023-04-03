@@ -4,7 +4,7 @@
 - Manual Driving
 - Final Results: The results captured from the Java program. Those are based on the auto driving.
 2. PDF: Investigation.[investigation.pdf](docs/investigation.pdf)
-
+3. Java folder contains an old implementation using Java JFrame.
 
 # Results:
 There are 3 algorithms:
@@ -15,6 +15,6 @@ There are 3 algorithms:
 
 ![land_traj.png](docs/land_traj.png)
 
-3. Alg 3 is an improved algorithm utilizing PID controller for Altitude and Angle and als an improved breaks system.
+3. Alg 3 is an improved algorithm utilizing PID controller for Altitude and Angle and als an improved breaks system. Nevertheless, this algorithm has an issue on final step (WIP).
 
 ![land_pid.png](docs/land_pid.png)

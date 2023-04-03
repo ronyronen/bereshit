@@ -11,7 +11,8 @@ There are 3 algorithms:
 1. A controller based on manual driving as described in the excel. Results show a nice descending.
 
 ![land.png](docs/land.png)
-2. A controller based on an interpolation functions. Results show a better descending.
+
+3. A controller based on an interpolation functions. Results show a better descending.
 
 ![land_traj.png](docs/land_traj.png)
 
